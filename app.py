@@ -68,7 +68,7 @@ class BaseStorage:
     def list_users(self):
         raise NotImplementedError
 
-    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None):
+    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None, department_id=None):
         raise NotImplementedError
 
     def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None):
@@ -240,13 +240,19 @@ class SQLiteStorage(BaseStorage):
                 password_hash TEXT NOT NULL,
                 name TEXT NOT NULL,
                 role TEXT NOT NULL CHECK(role IN ('superadmin', 'manager', 'member')),
+                department_id INTEGER,
                 status TEXT NOT NULL DEFAULT 'approved' CHECK(status IN ('pending', 'approved', 'rejected')),
                 approved_at TEXT,
                 approved_by INTEGER,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY(approved_by) REFERENCES users(id) ON DELETE SET NULL
+                FOREIGN KEY(approved_by) REFERENCES users(id) ON DELETE SET NULL,
+                FOREIGN KEY(department_id) REFERENCES departments(id) ON DELETE SET NULL
             )
         ''')
+
+        user_columns = [row['name'] for row in conn.execute('PRAGMA table_info(users)').fetchall()]
+        if 'department_id' not in user_columns:
+            conn.execute('ALTER TABLE users ADD COLUMN department_id INTEGER')
 
         cur.execute('''
             CREATE TABLE IF NOT EXISTS departments (
@@ -299,13 +305,13 @@ class SQLiteStorage(BaseStorage):
         conn.close()
         return self._row_to_dict(row)
 
-    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None):
+    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None, department_id=None):
         created_at = created_at or datetime.now().isoformat(timespec='seconds')
         conn = self._connect()
         cur = conn.cursor()
         cur.execute(
-            'INSERT INTO users (username, password_hash, name, role, status, approved_at, approved_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            (username, password_hash, name, role, status, approved_at, approved_by, created_at)
+            'INSERT INTO users (username, password_hash, name, role, department_id, status, approved_at, approved_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            (username, password_hash, name, role, department_id, status, approved_at, approved_by, created_at)
         )
         conn.commit()
         user_id = cur.lastrowid
@@ -482,12 +488,13 @@ class SupabaseStorage(BaseStorage):
         users = self.list_users()
         return next((user for user in users if user['username'] == username), None)
 
-    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None):
+    def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None, department_id=None):
         payload = {
             'username': username,
             'password_hash': password_hash,
             'name': name,
             'role': role,
+            'department_id': int(department_id) if department_id else None,
             'status': status,
             'approved_at': approved_at,
             'approved_by': approved_by,
@@ -673,9 +680,9 @@ def get_filtered_logs_for_view(user_id=None, limit=100):
     return enriched[:limit]
 
 
-def safe_create_user(username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None):
+def safe_create_user(username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None, department_id=None):
     try:
-        return storage.create_user(username, password_hash, name, role, status, approved_at=approved_at, approved_by=approved_by, created_at=created_at)
+        return storage.create_user(username, password_hash, name, role, status, approved_at=approved_at, approved_by=approved_by, created_at=created_at, department_id=department_id)
     except Exception as exc:
         message = str(exc).lower()
         if 'duplicate' in message or 'unique' in message or 'already exists' in message:
@@ -739,6 +746,7 @@ def login():
         session['username'] = user['username']
         session['name'] = user['name']
         session['role'] = user['role']
+        session['department_id'] = user.get('department_id')
         flash(f"{user['name']}님, 환영합니다.", 'success')
         return redirect(url_for('home'))
 
@@ -750,14 +758,23 @@ def register():
     if BOOTSTRAP_ERROR:
         return redirect(url_for('setup_error'))
 
+    departments = storage.get_departments_with_categories()
+    selected_department_id = request.form.get('department_id', '').strip()
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         name = request.form.get('name', '').strip()
+        department_id = selected_department_id
 
-        if not username or not password or not name:
-            flash('이름, 아이디, 비밀번호를 모두 입력해주세요.', 'danger')
-            return render_template('register.html')
+        if not username or not password or not name or not department_id:
+            flash('이름, 아이디, 비밀번호, 부서를 모두 입력해주세요.', 'danger')
+            return render_template('register.html', departments=departments, selected_department_id=selected_department_id)
+
+        department = storage.get_department_by_id(int(department_id)) if department_id.isdigit() else None
+        if not department:
+            flash('선택한 부서를 다시 확인해주세요.', 'danger')
+            return render_template('register.html', departments=departments, selected_department_id=selected_department_id)
 
         try:
             safe_create_user(
@@ -768,15 +785,16 @@ def register():
                 'pending',
                 approved_at=None,
                 approved_by=None,
-                created_at=datetime.now().isoformat(timespec='seconds')
+                created_at=datetime.now().isoformat(timespec='seconds'),
+                department_id=int(department_id)
             )
             flash('회원가입 신청이 접수되었습니다. 대표 관리자의 승인 후 로그인할 수 있습니다.', 'success')
             return redirect(url_for('login'))
         except StorageError as exc:
             flash(str(exc), 'danger')
-            return render_template('register.html')
+            return render_template('register.html', departments=departments, selected_department_id=selected_department_id)
 
-    return render_template('register.html')
+    return render_template('register.html', departments=departments, selected_department_id=selected_department_id)
 
 
 @app.route('/logout')
@@ -795,8 +813,12 @@ def users():
         password = request.form.get('password', '').strip()
         name = request.form.get('name', '').strip()
         role = request.form.get('role', 'member').strip()
-        if not username or not password or not name:
+        department_id = request.form.get('department_id', '').strip()
+        department = storage.get_department_by_id(int(department_id)) if department_id.isdigit() else None
+        if not username or not password or not name or not department_id:
             flash('모든 필드를 입력해주세요.', 'danger')
+        elif not department:
+            flash('선택한 부서를 다시 확인해주세요.', 'danger')
         else:
             try:
                 safe_create_user(
@@ -807,7 +829,8 @@ def users():
                     'approved',
                     approved_at=datetime.now().isoformat(timespec='seconds'),
                     approved_by=session.get('user_id'),
-                    created_at=datetime.now().isoformat(timespec='seconds')
+                    created_at=datetime.now().isoformat(timespec='seconds'),
+                    department_id=int(department_id)
                 )
                 flash('사용자가 즉시 승인 상태로 추가되었습니다.', 'success')
                 return redirect(url_for('users'))
@@ -818,7 +841,7 @@ def users():
     pending_users = sorted([user for user in all_users if user.get('status', 'approved') == 'pending'], key=lambda row: (row['created_at'], int(row['id'])))
     approved_users = sorted([user for user in all_users if user.get('status', 'approved') == 'approved'], key=lambda row: int(row['id']))
     rejected_users = sorted([user for user in all_users if user.get('status', 'approved') == 'rejected'], key=lambda row: (row['created_at'], int(row['id'])), reverse=True)
-    return render_template('users.html', pending_users=pending_users, approved_users=approved_users, rejected_users=rejected_users)
+    return render_template('users.html', pending_users=pending_users, approved_users=approved_users, rejected_users=rejected_users, departments=storage.get_departments_with_categories())
 
 
 @app.route('/users/<int:user_id>/approve', methods=['POST'])
@@ -964,7 +987,7 @@ def work_logs():
         logs = get_filtered_logs_for_view(user_id=session['user_id'], limit=100)
 
     departments = storage.get_departments_with_categories()
-    return render_template('work_logs.html', logs=logs, departments=departments)
+    return render_template('work_logs.html', logs=logs, departments=departments, selected_department_id=session.get('department_id') or '')
 
 
 @app.route('/work-logs/<int:log_id>/edit', methods=['GET', 'POST'])

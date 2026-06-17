@@ -4,6 +4,7 @@ create table if not exists public.users (
   password_hash text not null,
   name text not null,
   role text not null check (role in ('superadmin', 'manager', 'member')),
+  department_id bigint references public.departments(id) on delete set null,
   status text not null default 'approved' check (status in ('pending', 'approved', 'rejected')),
   approved_at text,
   approved_by bigint references public.users(id) on delete set null,

@@ -31,7 +31,16 @@
                         <select name="role" class="form-select" required>
                             <option value="superadmin">대표 관리자</option>
                             <option value="manager">중간 관리자</option>
-                            <option value="member">일반 팀원</option>
+                            <option value="member" selected>일반 팀원</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">부서</label>
+                        <select name="department_id" class="form-select" required>
+                            <option value="">부서 선택</option>
+                            {% for dep in departments %}
+                            <option value="{{ dep.id }}">{{ dep.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">즉시 승인 사용자 저장</button>

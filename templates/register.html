@@ -22,6 +22,15 @@
                         <label class="form-label">비밀번호</label>
                         <input type="password" name="password" class="form-control form-control-lg" placeholder="비밀번호 입력" required>
                     </div>
+                    <div>
+                        <label class="form-label">부서</label>
+                        <select name="department_id" class="form-select form-select-lg" required>
+                            <option value="">부서 선택</option>
+                            {% for dep in departments %}
+                            <option value="{{ dep.id }}" {% if selected_department_id == dep.id|string %}selected{% endif %}>{{ dep.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary btn-lg w-100">회원가입 신청</button>
                 </form>
                 <div class="d-grid mt-3">

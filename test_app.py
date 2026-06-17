@@ -34,27 +34,52 @@ admin_login = login('admin', 'admin1234')
 assert admin_login.status_code == 200
 assert '대시보드'.encode('utf-8') in admin_login.data
 
-# 테스트 사용자 생성
-for user_data in [
-    {'name': 'A직원', 'username': 'membera', 'password': 'pw123456', 'role': 'member'},
-    {'name': 'B직원', 'username': 'memberb', 'password': 'pw123456', 'role': 'member'},
-    {'name': 'D관리자', 'username': 'manager1', 'password': 'pw123456', 'role': 'manager'},
-]:
-    response = client.post('/users', data=user_data, follow_redirects=True)
-    assert response.status_code == 200
-    assert '즉시 승인 상태'.encode('utf-8') in response.data
-
 with app_module.get_db() as conn:
     department_marketing = conn.execute("SELECT id FROM departments WHERE name = '마케팅&경영지원'").fetchone()['id']
+    department_research = conn.execute("SELECT id FROM departments WHERE name = '연구소'").fetchone()['id']
     department_production = conn.execute("SELECT id FROM departments WHERE name = '생산팀'").fetchone()['id']
     category_content = conn.execute("SELECT id FROM task_categories WHERE name = '콘텐츠 제작'").fetchone()['id']
     category_ad = conn.execute("SELECT id FROM task_categories WHERE name = '광고 운영'").fetchone()['id']
     category_quality = conn.execute("SELECT id FROM task_categories WHERE name = '품질 점검'").fetchone()['id']
 
+# 테스트 사용자 생성
+for user_data in [
+    {'name': 'A직원', 'username': 'membera', 'password': 'pw123456', 'role': 'member', 'department_id': str(department_marketing)},
+    {'name': 'B직원', 'username': 'memberb', 'password': 'pw123456', 'role': 'member', 'department_id': str(department_research)},
+    {'name': 'D관리자', 'username': 'manager1', 'password': 'pw123456', 'role': 'manager', 'department_id': str(department_production)},
+]:
+    response = client.post('/users', data=user_data, follow_redirects=True)
+    assert response.status_code == 200
+    assert '즉시 승인 상태'.encode('utf-8') in response.data
+
 logout()
+
+# 회원가입 화면에 부서 드롭다운이 보이는지 확인
+register_page = client.get('/register')
+assert register_page.status_code == 200
+assert 'name="department_id"'.encode('utf-8') in register_page.data
+
+# 회원가입 시 부서 저장 확인
+register_submit = client.post('/register', data={
+    'name': '신규 팀원',
+    'username': 'newmember',
+    'password': 'pw123456',
+    'department_id': str(department_research)
+}, follow_redirects=True)
+assert register_submit.status_code == 200
+assert '회원가입 신청이 접수되었습니다.'.encode('utf-8') in register_submit.data
+with app_module.get_db() as conn:
+    new_member = conn.execute("SELECT department_id, status FROM users WHERE username = 'newmember'").fetchone()
+assert new_member['department_id'] == department_research
+assert new_member['status'] == 'pending'
 
 # A직원 업무일지 2건 작성
 login('membera', 'pw123456')
+work_logs_page = client.get('/work-logs')
+assert work_logs_page.status_code == 200
+assert f'id="selected-department-id" type="application/json">{department_marketing}<'.encode('utf-8') in work_logs_page.data
+assert '같은 부서 업무 추가 +'.encode('utf-8') in work_logs_page.data
+
 create_logs_a = client.post('/work-logs', data={
     'work_date': '2026-06-17',
     'entries_json': json.dumps([

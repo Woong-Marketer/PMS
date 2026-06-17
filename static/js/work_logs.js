@@ -3,10 +3,14 @@ const entryRows = document.getElementById('entryRows');
 const addEntryBtn = document.getElementById('addEntryBtn');
 const workLogForm = document.getElementById('workLogForm');
 const entriesJson = document.getElementById('entriesJson');
+const selectedDepartmentId = JSON.parse(document.getElementById('selected-department-id').textContent || '""');
 
-function buildDepartmentOptions() {
+function buildDepartmentOptions(currentDepartmentId = '') {
     return ['<option value="">부서 선택</option>']
-        .concat(departmentsData.map(dep => `<option value="${dep.id}">${dep.name}</option>`))
+        .concat(departmentsData.map(dep => {
+            const selected = String(dep.id) === String(currentDepartmentId) ? 'selected' : '';
+            return `<option value="${dep.id}" ${selected}>${dep.name}</option>`;
+        }))
         .join('');
 }
 
@@ -20,7 +24,7 @@ function buildCategoryOptions(departmentId) {
         .join('');
 }
 
-function createEntryRow() {
+function createEntryRow(defaultDepartmentId = '', defaultCategoryId = '', defaultDetail = '') {
     const wrapper = document.createElement('div');
     wrapper.className = 'work-entry-row';
     wrapper.innerHTML = `
@@ -30,28 +34,45 @@ function createEntryRow() {
         </div>
         <div class="row g-3">
             <div class="col-lg-3">
-                <label class="form-label">1단계 - 부서 선택</label>
-                <select class="form-select department-select" required>${buildDepartmentOptions()}</select>
+                <label class="form-label">부서</label>
+                <select class="form-select department-select" required>${buildDepartmentOptions(defaultDepartmentId)}</select>
             </div>
             <div class="col-lg-3">
-                <label class="form-label">2단계 - 업무 분류 선택</label>
+                <label class="form-label">업무 분류</label>
                 <select class="form-select category-select" required>
                     <option value="">업무 분류 선택</option>
                 </select>
             </div>
             <div class="col-lg-6">
-                <label class="form-label">3단계 - 상세 내용 입력</label>
-                <input type="text" class="form-control detail-input" placeholder="상세 업무 내용을 입력하세요" required>
+                <label class="form-label">상세 내용</label>
+                <input type="text" class="form-control detail-input" placeholder="예: 광고 소재 검수, 거래처 응대, 샘플 테스트" value="${defaultDetail}" required>
             </div>
         </div>
     `;
 
     const departmentSelect = wrapper.querySelector('.department-select');
     const categorySelect = wrapper.querySelector('.category-select');
+    const detailInput = wrapper.querySelector('.detail-input');
     const removeBtn = wrapper.querySelector('.remove-entry-btn');
 
-    departmentSelect.addEventListener('change', () => {
+    const syncCategories = (currentCategoryId = '') => {
         categorySelect.innerHTML = buildCategoryOptions(departmentSelect.value);
+        if (currentCategoryId) {
+            categorySelect.value = String(currentCategoryId);
+        }
+    };
+
+    syncCategories(defaultCategoryId);
+
+    departmentSelect.addEventListener('change', () => {
+        syncCategories('');
+        categorySelect.focus();
+    });
+
+    categorySelect.addEventListener('change', () => {
+        if (categorySelect.value) {
+            detailInput.focus();
+        }
     });
 
     removeBtn.addEventListener('click', () => {
@@ -65,7 +86,13 @@ function createEntryRow() {
     entryRows.appendChild(wrapper);
 }
 
-addEntryBtn.addEventListener('click', createEntryRow);
+function getLastSelectedDepartmentId() {
+    const rows = Array.from(document.querySelectorAll('.work-entry-row'));
+    const lastRow = rows[rows.length - 1];
+    return lastRow ? lastRow.querySelector('.department-select').value : '';
+}
+
+addEntryBtn.addEventListener('click', () => createEntryRow(getLastSelectedDepartmentId() || selectedDepartmentId));
 
 workLogForm.addEventListener('submit', (event) => {
     const rows = Array.from(document.querySelectorAll('.work-entry-row'));
@@ -84,4 +111,4 @@ workLogForm.addEventListener('submit', (event) => {
     entriesJson.value = JSON.stringify(validEntries);
 });
 
-createEntryRow();
+createEntryRow(selectedDepartmentId);

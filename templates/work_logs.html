@@ -74,7 +74,7 @@
             <div class="modal-header">
                 <div>
                     <h5 class="modal-title fw-bold">업무 일지 작성</h5>
-                    <div class="text-muted small">부서 → 업무 분류 → 상세 내용 순서로 입력하세요.</div>
+                    <div class="text-muted small">기본값은 내 부서입니다. 업무 분류와 내용만 빠르게 입력하세요.</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -88,7 +88,7 @@
                     </div>
                     <div id="entryRows"></div>
                     <input type="hidden" name="entries_json" id="entriesJson">
-                    <button type="button" class="btn btn-outline-primary" id="addEntryBtn">업무 추가 +</button>
+                    <button type="button" class="btn btn-outline-primary" id="addEntryBtn">같은 부서 업무 추가 +</button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">닫기</button>
@@ -100,6 +100,7 @@
 </div>
 
 <script id="departments-data" type="application/json">{{ departments|tojson }}</script>
+<script id="selected-department-id" type="application/json">{{ selected_department_id|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
