@@ -654,12 +654,14 @@ def enrich_work_logs(logs):
             'user_id': int(log['user_id']),
             'department_id': int(log['department_id']),
             'category_id': int(log['category_id']),
-            'hours': float(log['hours']),
+            'hours': float(log.get('hours', 1) or 1),
             'user_name': users.get(int(log['user_id']), {}).get('name', '-'),
             'department_name': departments.get(int(log['department_id']), {}).get('name', '-'),
             'category_name': categories.get(int(log['category_id']), {}).get('name', '-')
         })
     enriched.sort(key=lambda row: (row['work_date'], row['id']), reverse=True)
+    enriched.sort(key=lambda row: row['department_name'])
+    enriched.sort(key=lambda row: row['user_name'])
     return enriched
 
 
@@ -724,11 +726,12 @@ def login():
             flash('아이디 또는 비밀번호가 올바르지 않습니다.', 'danger')
             return render_template('login.html')
 
-        if user['status'] == 'pending':
+        user_status = user.get('status', 'approved')
+        if user_status == 'pending':
             flash('회원가입 신청은 완료되었지만 아직 관리자 승인이 필요합니다.', 'warning')
             return render_template('login.html')
 
-        if user['status'] == 'rejected':
+        if user_status == 'rejected':
             flash('이 계정은 관리자에 의해 반려되었습니다. 관리자에게 문의해주세요.', 'danger')
             return render_template('login.html')
 
@@ -812,9 +815,9 @@ def users():
                 flash(str(exc), 'danger')
 
     all_users = storage.list_users()
-    pending_users = sorted([user for user in all_users if user['status'] == 'pending'], key=lambda row: (row['created_at'], int(row['id'])))
-    approved_users = sorted([user for user in all_users if user['status'] == 'approved'], key=lambda row: int(row['id']))
-    rejected_users = sorted([user for user in all_users if user['status'] == 'rejected'], key=lambda row: (row['created_at'], int(row['id'])), reverse=True)
+    pending_users = sorted([user for user in all_users if user.get('status', 'approved') == 'pending'], key=lambda row: (row['created_at'], int(row['id'])))
+    approved_users = sorted([user for user in all_users if user.get('status', 'approved') == 'approved'], key=lambda row: int(row['id']))
+    rejected_users = sorted([user for user in all_users if user.get('status', 'approved') == 'rejected'], key=lambda row: (row['created_at'], int(row['id'])), reverse=True)
     return render_template('users.html', pending_users=pending_users, approved_users=approved_users, rejected_users=rejected_users)
 
 
@@ -934,9 +937,8 @@ def work_logs():
         for entry in entries:
             department_id = entry.get('department_id')
             category_id = entry.get('category_id')
-            hours = entry.get('hours')
             detail = (entry.get('detail') or '').strip()
-            if department_id and category_id and hours and detail:
+            if department_id and category_id and detail:
                 category = storage.get_category_by_id(int(category_id))
                 if not category or int(category['department_id']) != int(department_id):
                     continue
@@ -945,7 +947,7 @@ def work_logs():
                     work_date,
                     int(department_id),
                     int(category_id),
-                    float(hours),
+                    1.0,
                     detail,
                     datetime.now().isoformat(timespec='seconds')
                 )
@@ -981,17 +983,16 @@ def edit_work_log(log_id):
         work_date = request.form.get('work_date', '').strip()
         department_id = request.form.get('department_id', '').strip()
         category_id = request.form.get('category_id', '').strip()
-        hours = request.form.get('hours', '').strip()
         detail = request.form.get('detail', '').strip()
 
-        if not work_date or not department_id or not category_id or not hours or not detail:
+        if not work_date or not department_id or not category_id or not detail:
             flash('모든 항목을 입력해주세요.', 'danger')
         else:
             category = storage.get_category_by_id(int(category_id)) if category_id.isdigit() else None
             if not category or int(category['department_id']) != int(department_id):
                 flash('선택한 부서와 업무 분류가 일치하지 않습니다.', 'danger')
             else:
-                storage.update_work_log(log_id, work_date, int(department_id), int(category_id), float(hours), detail)
+                storage.update_work_log(log_id, work_date, int(department_id), int(category_id), 1.0, detail)
                 flash('업무 일지가 수정되었습니다.', 'success')
                 return redirect(url_for('work_logs'))
 
@@ -1020,7 +1021,7 @@ def delete_work_log(log_id):
 @app.route('/dashboard')
 @role_required('superadmin', 'manager')
 def dashboard():
-    members = [user for user in storage.list_users() if user['status'] == 'approved' and user['role'] in ['member', 'manager', 'superadmin']]
+    members = [user for user in storage.list_users() if user.get('status', 'approved') == 'approved' and user.get('role', 'member') in ['member', 'manager', 'superadmin']]
     members.sort(key=lambda user: user['name'])
     return render_template('dashboard.html', members=members)
 
@@ -1058,23 +1059,22 @@ def api_dashboard_data():
         filtered_logs.append(log)
 
     enriched = enrich_work_logs(filtered_logs)
-    total_hours = round(sum(float(log['hours']) for log in enriched), 2)
+    total_count = len(enriched)
 
     category_totals = {}
     for log in enriched:
-        category_totals.setdefault(log['category_name'], 0.0)
-        category_totals[log['category_name']] += float(log['hours'])
+        category_totals.setdefault(log['category_name'], 0)
+        category_totals[log['category_name']] += 1
 
     categories = []
     for label, value in sorted(category_totals.items(), key=lambda item: item[1], reverse=True):
-        value = round(value, 2)
-        percent = round((value / total_hours) * 100, 1) if total_hours else 0
+        percent = round((value / total_count) * 100, 1) if total_count else 0
         categories.append({'label': label, 'value': value, 'percent': percent})
 
     return jsonify({
         'period': period,
         'range': {'start': start_date, 'end': end_date},
-        'total_hours': total_hours,
+        'total_count': total_count,
         'departments': [],
         'categories': categories,
         'daily': []

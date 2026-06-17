@@ -32,7 +32,7 @@ function buildChart(canvasId, type, labels, values, label, options = {}) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.label}: ${context.raw}시간`;
+                            return `${context.label}: ${context.raw}건`;
                         }
                     }
                 }
@@ -59,7 +59,7 @@ async function loadDashboard() {
         'pie',
         data.categories.map(item => `${item.label} (${item.percent}%)`),
         data.categories.map(item => item.value),
-        '업무 분류별 시간'
+        '업무 분류별 작성 건수'
     );
 }
 

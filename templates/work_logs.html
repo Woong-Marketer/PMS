@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold mb-1">일일 업무 일지</h2>
-        <p class="text-muted mb-0">업무 등록은 팝업에서, 기존 기록의 수정과 삭제는 목록에서 바로 관리할 수 있습니다.</p>
+        <p class="text-muted mb-0">업무 등록은 팝업에서, 기존 기록은 직원별로 묶어서 확인하고 수정·삭제할 수 있습니다.</p>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logModal">업무 등록</button>
 </div>
@@ -13,7 +13,7 @@
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold mb-0">최근 업무 기록</h5>
-            <span class="text-muted small">최대 100건</span>
+            <span class="text-muted small">직원명 기준 묶음 정렬 · 최대 100건</span>
         </div>
         <div class="table-responsive">
             <table class="table align-middle">
@@ -23,36 +23,41 @@
                         <th>작성자</th>
                         <th>부서</th>
                         <th>업무 분류</th>
-                        <th>소요 시간</th>
                         <th>상세 내용</th>
                         <th>관리</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% set ns = namespace(current_user='') %}
                     {% for log in logs %}
-                    <tr>
-                        <td>{{ log.work_date }}</td>
-                        <td>{{ log.user_name }}</td>
-                        <td>{{ log.department_name }}</td>
-                        <td>{{ log.category_name }}</td>
-                        <td>{{ log.hours }}시간</td>
-                        <td>{{ log.detail }}</td>
-                        <td>
-                            {% if session.get('role') in ['superadmin', 'manager'] or session.get('user_id') == log.user_id %}
-                            <div class="d-flex gap-2 flex-wrap">
-                                <a href="{{ url_for('edit_work_log', log_id=log.id) }}" class="btn btn-sm btn-outline-primary">수정</a>
-                                <form method="post" action="{{ url_for('delete_work_log', log_id=log.id) }}" onsubmit="return confirm('해당 업무 일지를 삭제할까요?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
-                                </form>
-                            </div>
-                            {% else %}
-                            <span class="text-muted small">권한 없음</span>
-                            {% endif %}
-                        </td>
-                    </tr>
+                        {% if log.user_name != ns.current_user %}
+                        <tr class="table-light">
+                            <td colspan="6" class="fw-semibold">{{ log.user_name }} 업무 기록</td>
+                        </tr>
+                        {% set ns.current_user = log.user_name %}
+                        {% endif %}
+                        <tr>
+                            <td>{{ log.work_date }}</td>
+                            <td>{{ log.user_name }}</td>
+                            <td>{{ log.department_name }}</td>
+                            <td>{{ log.category_name }}</td>
+                            <td>{{ log.detail }}</td>
+                            <td>
+                                {% if session.get('role') in ['superadmin', 'manager'] or session.get('user_id') == log.user_id %}
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="{{ url_for('edit_work_log', log_id=log.id) }}" class="btn btn-sm btn-outline-primary">수정</a>
+                                    <form method="post" action="{{ url_for('delete_work_log', log_id=log.id) }}" onsubmit="return confirm('해당 업무 일지를 삭제할까요?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <span class="text-muted small">권한 없음</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="6">
                             <div class="empty-state">아직 등록된 업무 기록이 없습니다.</div>
                         </td>
                     </tr>
@@ -69,7 +74,7 @@
             <div class="modal-header">
                 <div>
                     <h5 class="modal-title fw-bold">업무 일지 작성</h5>
-                    <div class="text-muted small">부서 → 업무 분류 → 소요 시간 → 상세 내용 순서로 입력하세요.</div>
+                    <div class="text-muted small">부서 → 업무 분류 → 상세 내용 순서로 입력하세요.</div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>

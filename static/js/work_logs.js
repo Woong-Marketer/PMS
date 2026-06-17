@@ -4,15 +4,6 @@ const addEntryBtn = document.getElementById('addEntryBtn');
 const workLogForm = document.getElementById('workLogForm');
 const entriesJson = document.getElementById('entriesJson');
 
-function buildHourOptions() {
-    const options = [];
-    for (let i = 0.5; i <= 12; i += 0.5) {
-        const value = i.toFixed(1);
-        options.push(`<option value="${value}">${value}시간</option>`);
-    }
-    return options.join('');
-}
-
 function buildDepartmentOptions() {
     return ['<option value="">부서 선택</option>']
         .concat(departmentsData.map(dep => `<option value="${dep.id}">${dep.name}</option>`))
@@ -48,12 +39,8 @@ function createEntryRow() {
                     <option value="">업무 분류 선택</option>
                 </select>
             </div>
-            <div class="col-lg-2">
-                <label class="form-label">3단계 - 소요 시간</label>
-                <select class="form-select hours-select" required>${buildHourOptions()}</select>
-            </div>
-            <div class="col-lg-4">
-                <label class="form-label">4단계 - 상세 내용 입력</label>
+            <div class="col-lg-6">
+                <label class="form-label">3단계 - 상세 내용 입력</label>
                 <input type="text" class="form-control detail-input" placeholder="상세 업무 내용을 입력하세요" required>
             </div>
         </div>
@@ -85,11 +72,10 @@ workLogForm.addEventListener('submit', (event) => {
     const payload = rows.map(row => ({
         department_id: row.querySelector('.department-select').value,
         category_id: row.querySelector('.category-select').value,
-        hours: row.querySelector('.hours-select').value,
         detail: row.querySelector('.detail-input').value.trim()
     }));
 
-    const validEntries = payload.filter(item => item.department_id && item.category_id && item.hours && item.detail);
+    const validEntries = payload.filter(item => item.department_id && item.category_id && item.detail);
     if (!validEntries.length) {
         event.preventDefault();
         alert('최소 1개 이상의 유효한 업무 항목을 입력해주세요.');
