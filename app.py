@@ -1030,10 +1030,7 @@ def work_logs():
             flash('저장할 유효한 업무 항목이 없습니다.', 'warning')
         return redirect(url_for('work_logs'))
 
-    if session.get('role') in ['superadmin', 'manager']:
-        logs = get_filtered_logs_for_view(limit=100)
-    else:
-        logs = get_filtered_logs_for_view(user_id=session['user_id'], limit=100)
+    logs = get_filtered_logs_for_view(limit=100)
 
     departments = storage.get_departments_with_categories()
     return render_template('work_logs.html', logs=logs, departments=departments, selected_department_id=session.get('department_id') or '')

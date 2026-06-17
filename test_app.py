@@ -132,6 +132,16 @@ create_logs_d = client.post('/work-logs', data={
 assert create_logs_d.status_code == 200
 logout()
 
+# 일반 팀원도 전체 업무일지를 조회할 수 있는지 확인
+login('membera', 'pw123456')
+shared_logs_page = client.get('/work-logs')
+assert shared_logs_page.status_code == 200
+shared_html = shared_logs_page.data.decode('utf-8')
+assert 'A직원 업무 기록' in shared_html
+assert 'B직원 업무 기록' in shared_html
+assert 'D관리자 업무 기록' in shared_html
+logout()
+
 # 관리자 화면에서 직원별 묶음 정렬 확인
 login('admin', 'admin1234')
 logs_page = client.get('/work-logs')
