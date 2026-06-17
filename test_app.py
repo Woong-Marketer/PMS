@@ -132,26 +132,43 @@ create_logs_d = client.post('/work-logs', data={
 assert create_logs_d.status_code == 200
 logout()
 
-# 일반 팀원도 전체 업무일지를 조회할 수 있는지 확인
+# 일반 팀원도 전체 업무일지를 일별로 조회할 수 있는지 확인
 login('membera', 'pw123456')
-shared_logs_page = client.get('/work-logs')
+shared_logs_page = client.get('/work-logs?view_date=2026-06-17')
 assert shared_logs_page.status_code == 200
 shared_html = shared_logs_page.data.decode('utf-8')
+assert '2026-06-17 업무 기록' in shared_html
 assert 'A직원 업무 기록' in shared_html
 assert 'B직원 업무 기록' in shared_html
-assert 'D관리자 업무 기록' in shared_html
+assert 'D관리자 업무 기록' not in shared_html
+assert '기록 찾기' in shared_html
+assert '검색어' in shared_html
+
+# 날짜를 바꾸면 해당 날짜 기록만 보이는지 확인
+next_day_page = client.get('/work-logs?view_date=2026-06-18')
+assert next_day_page.status_code == 200
+next_day_html = next_day_page.data.decode('utf-8')
+assert 'D관리자 업무 기록' in next_day_html
+assert 'A직원 업무 기록' not in next_day_html
 logout()
 
-# 관리자 화면에서 직원별 묶음 정렬 확인
+# 관리자 화면에서 직원별 묶음 정렬 및 검색 확인
 login('admin', 'admin1234')
-logs_page = client.get('/work-logs')
+logs_page = client.get('/work-logs?view_date=2026-06-17')
 assert logs_page.status_code == 200
 html = logs_page.data.decode('utf-8')
 assert '소요 시간' not in html
 assert 'A직원 업무 기록' in html
 assert 'B직원 업무 기록' in html
-assert 'D관리자 업무 기록' in html
-assert html.find('A직원 업무 기록') < html.find('B직원 업무 기록') < html.find('D관리자 업무 기록')
+assert 'D관리자 업무 기록' not in html
+assert html.find('A직원 업무 기록') < html.find('B직원 업무 기록')
+
+search_page = client.get('/work-logs?view_date=2026-06-17&keyword=광고')
+assert search_page.status_code == 200
+search_html = search_page.data.decode('utf-8')
+assert 'A의 두 번째 기록' in search_html
+assert '검색 초기화' in search_html
+assert '검색 조건에 맞는 업무 기록이 없습니다.' not in search_html
 
 with app_module.get_db() as conn:
     member_a_id = conn.execute("SELECT id FROM users WHERE username = 'membera'").fetchone()['id']

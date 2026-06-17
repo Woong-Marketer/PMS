@@ -711,6 +711,26 @@ def safe_create_user(username, password_hash, name, role, status, approved_at=No
         raise
 
 
+def parse_iso_date(value, fallback=None):
+    fallback = fallback or date.today()
+    if not value:
+        return fallback
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except ValueError:
+        return fallback
+
+
+def get_approved_members():
+    members = [user for user in storage.list_users() if user.get('status', 'approved') == 'approved' and user.get('role', 'member') in ['member', 'manager', 'superadmin']]
+    department_map = {int(dep['id']): dep['name'] for dep in storage.list_departments()}
+    for user in members:
+        department_id = user.get('department_id')
+        user['department_name'] = department_map.get(int(department_id), '-') if department_id else '-'
+    members.sort(key=lambda user: user['name'])
+    return members
+
+
 @app.context_processor
 def inject_globals():
     return {
@@ -1028,12 +1048,78 @@ def work_logs():
             flash(f'{saved_count}건의 업무 일지가 저장되었습니다.', 'success')
         else:
             flash('저장할 유효한 업무 항목이 없습니다.', 'warning')
-        return redirect(url_for('work_logs'))
+        return redirect(url_for('work_logs', view_date=work_date))
 
-    logs = get_filtered_logs_for_view(limit=100)
+    requested_date = parse_iso_date(request.args.get('view_date'), date.today())
+    nav = request.args.get('nav', '').strip()
+    if nav == 'prev':
+        requested_date = requested_date - timedelta(days=1)
+    elif nav == 'next':
+        requested_date = requested_date + timedelta(days=1)
+    elif nav == 'today':
+        requested_date = date.today()
+
+    keyword = request.args.get('keyword', '').strip()
+    user_id = request.args.get('user_id', 'all').strip() or 'all'
+    category_id = request.args.get('category_id', 'all').strip() or 'all'
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+
+    all_logs = get_filtered_logs_for_view(limit=1000)
+    daily_logs = [log for log in all_logs if log['work_date'] == requested_date.isoformat()]
+
+    search_active = any([keyword, user_id != 'all', category_id != 'all', start_date, end_date])
+    search_results = []
+    if search_active:
+        search_start = parse_iso_date(start_date, date(2000, 1, 1)) if start_date else None
+        search_end = parse_iso_date(end_date, date(2100, 12, 31)) if end_date else None
+        lowered_keyword = keyword.lower()
+        for log in all_logs:
+            if user_id != 'all' and str(log['user_id']) != str(user_id):
+                continue
+            if category_id != 'all' and str(log['category_id']) != str(category_id):
+                continue
+            log_date = parse_iso_date(log['work_date'])
+            if search_start and log_date < search_start:
+                continue
+            if search_end and log_date > search_end:
+                continue
+            haystack = f"{log['detail']} {log['category_name']} {log['department_name']} {log['user_name']}".lower()
+            if lowered_keyword and lowered_keyword not in haystack:
+                continue
+            search_results.append(log)
+        search_results.sort(key=lambda row: (row['work_date'], row['user_name'], row['id']), reverse=True)
 
     departments = storage.get_departments_with_categories()
-    return render_template('work_logs.html', logs=logs, departments=departments, selected_department_id=session.get('department_id') or '')
+    members = get_approved_members()
+    flat_categories = []
+    for dep in departments:
+        for cat in dep['categories']:
+            flat_categories.append({
+                'id': int(cat['id']),
+                'name': cat['name'],
+                'department_name': dep['name']
+            })
+    flat_categories.sort(key=lambda row: (row['department_name'], row['name']))
+
+    return render_template(
+        'work_logs.html',
+        logs=daily_logs,
+        departments=departments,
+        selected_department_id=session.get('department_id') or '',
+        selected_date=requested_date.isoformat(),
+        prev_date=(requested_date - timedelta(days=1)).isoformat(),
+        next_date=(requested_date + timedelta(days=1)).isoformat(),
+        members=members,
+        categories=flat_categories,
+        search_active=search_active,
+        search_results=search_results,
+        search_keyword=keyword,
+        search_user_id=user_id,
+        search_category_id=category_id,
+        search_start_date=start_date,
+        search_end_date=end_date
+    )
 
 
 @app.route('/work-logs/<int:log_id>/edit', methods=['GET', 'POST'])
@@ -1090,8 +1176,7 @@ def delete_work_log(log_id):
 @app.route('/dashboard')
 @role_required('superadmin', 'manager')
 def dashboard():
-    members = [user for user in storage.list_users() if user.get('status', 'approved') == 'approved' and user.get('role', 'member') in ['member', 'manager', 'superadmin']]
-    members.sort(key=lambda user: user['name'])
+    members = get_approved_members()
     return render_template('dashboard.html', members=members)
 
 

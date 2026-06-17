@@ -4,16 +4,44 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold mb-1">일일 업무 일지</h2>
-        <p class="text-muted mb-0">업무 등록은 팝업에서, 기존 기록은 직원별로 묶어서 확인하고 수정·삭제할 수 있습니다.</p>
+        <p class="text-muted mb-0">일별로 협업 현황을 보고, 필요한 업무는 검색으로 빠르게 다시 찾을 수 있습니다.</p>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logModal">업무 등록</button>
 </div>
 
-<div class="card shadow-sm">
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
+            <div>
+                <h5 class="fw-bold mb-1">일별 보기</h5>
+                <p class="text-muted mb-0">선택한 날짜의 전체 업무일지를 직원별로 묶어서 확인합니다.</p>
+            </div>
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small text-muted">업무 일자</label>
+                    <input type="date" name="view_date" value="{{ selected_date }}" class="form-control">
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <button type="submit" name="nav" value="prev" class="btn btn-outline-secondary">◀ 이전날</button>
+                    <button type="submit" name="nav" value="today" class="btn btn-outline-dark">오늘</button>
+                    <button type="submit" name="nav" value="next" class="btn btn-outline-secondary">다음날 ▶</button>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">이 날짜 보기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0">최근 업무 기록</h5>
-            <span class="text-muted small">직원명 기준 묶음 정렬 · 최대 100건</span>
+            <div>
+                <h5 class="fw-bold mb-0">{{ selected_date }} 업무 기록</h5>
+                <span class="text-muted small">직원명 기준 묶음 정렬</span>
+            </div>
+            <span class="badge text-bg-light">총 {{ logs|length }}건</span>
         </div>
         <div class="table-responsive">
             <table class="table align-middle">
@@ -58,13 +86,97 @@
                     {% else %}
                     <tr>
                         <td colspan="6">
-                            <div class="empty-state">아직 등록된 업무 기록이 없습니다.</div>
+                            <div class="empty-state">선택한 날짜에 등록된 업무 기록이 없습니다.</div>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="fw-bold mb-0">기록 찾기</h5>
+                <span class="text-muted small">“그 업무 언제 했더라?”를 키워드와 필터로 빠르게 찾습니다.</span>
+            </div>
+            {% if search_active %}
+            <a href="{{ url_for('work_logs', view_date=selected_date) }}" class="btn btn-sm btn-outline-secondary">검색 초기화</a>
+            {% endif %}
+        </div>
+        <form method="get" class="row g-3 align-items-end mb-3">
+            <input type="hidden" name="view_date" value="{{ selected_date }}">
+            <div class="col-lg-3">
+                <label class="form-label">검색어</label>
+                <input type="text" name="keyword" value="{{ search_keyword }}" class="form-control" placeholder="예: 광고, 샘플, 거래처">
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">작성자</label>
+                <select name="user_id" class="form-select">
+                    <option value="all">전체 직원</option>
+                    {% for member in members %}
+                    <option value="{{ member.id }}" {% if search_user_id == member.id|string %}selected{% endif %}>{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">업무 분류</label>
+                <select name="category_id" class="form-select">
+                    <option value="all">전체 업무 분류</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if search_category_id == cat.id|string %}selected{% endif %}>{{ cat.department_name }} · {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">시작일</label>
+                <input type="date" name="start_date" value="{{ search_start_date }}" class="form-control">
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">종료일</label>
+                <input type="date" name="end_date" value="{{ search_end_date }}" class="form-control">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-dark">검색</button>
+                <a href="{{ url_for('work_logs', view_date=selected_date) }}" class="btn btn-light">초기화</a>
+            </div>
+        </form>
+
+        {% if search_active %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>일자</th>
+                        <th>작성자</th>
+                        <th>부서</th>
+                        <th>업무 분류</th>
+                        <th>상세 내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in search_results %}
+                    <tr>
+                        <td>{{ log.work_date }}</td>
+                        <td>{{ log.user_name }}</td>
+                        <td>{{ log.department_name }}</td>
+                        <td>{{ log.category_name }}</td>
+                        <td>{{ log.detail }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5"><div class="empty-state">검색 조건에 맞는 업무 기록이 없습니다.</div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">검색어 또는 필터를 입력하면 과거 업무 기록을 바로 찾을 수 있습니다.</div>
+        {% endif %}
     </div>
 </div>
 
@@ -83,7 +195,7 @@
                     <div class="row g-3 align-items-end mb-4">
                         <div class="col-md-4 col-lg-3">
                             <label class="form-label">업무 일자</label>
-                            <input type="date" class="form-control" name="work_date" value="{{ today_str }}" required>
+                            <input type="date" class="form-control" name="work_date" value="{{ selected_date }}" required>
                         </div>
                     </div>
                     <div id="entryRows"></div>
