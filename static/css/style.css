@@ -79,16 +79,19 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .action-input-sm {
-    min-width: 180px;
+    min-width: 140px;
+    width: auto;
+    flex: 1 1 auto;
 }
 
 .action-btn-sm {
-    min-width: 68px;
+    min-width: 64px;
     white-space: nowrap;
+    flex: 0 0 auto;
 }
 
 .action-btn-lg {
@@ -101,6 +104,7 @@ body {
 .category-actions-wrap,
 .user-role-form {
     justify-content: flex-end;
+    flex-wrap: nowrap;
 }
 
 .category-edit-form,
@@ -124,6 +128,17 @@ body {
 }
 
 @media (max-width: 991.98px) {
+    .action-form-inline,
+    .department-header-actions,
+    .category-actions-wrap,
+    .user-role-form,
+    .category-edit-form,
+    .department-edit-form,
+    .add-category-row {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
     .action-input-sm,
     .action-btn-lg {
         min-width: 100%;
@@ -133,11 +148,5 @@ body {
     .category-actions-wrap,
     .user-role-form {
         justify-content: flex-start;
-    }
-
-    .category-edit-form,
-    .department-edit-form,
-    .add-category-row {
-        width: 100%;
     }
 }

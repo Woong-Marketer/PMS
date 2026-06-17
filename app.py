@@ -494,6 +494,10 @@ def department_settings():
     return render_template('department_settings.html', departments=data)
 
 
+def can_manage_work_log(log_row):
+    return session.get('role') in ['superadmin', 'manager'] or log_row['user_id'] == session.get('user_id')
+
+
 @app.route('/work-logs', methods=['GET', 'POST'])
 @role_required('member', 'manager', 'superadmin')
 def work_logs():
@@ -566,6 +570,90 @@ def work_logs():
     departments = get_departments_with_categories()
     conn.close()
     return render_template('work_logs.html', logs=logs, departments=departments)
+
+
+@app.route('/work-logs/<int:log_id>/edit', methods=['GET', 'POST'])
+@role_required('member', 'manager', 'superadmin')
+def edit_work_log(log_id):
+    conn = get_db()
+    log = conn.execute(
+        """
+        SELECT wl.*, u.name AS user_name, d.name AS department_name, tc.name AS category_name
+        FROM work_logs wl
+        JOIN users u ON wl.user_id = u.id
+        JOIN departments d ON wl.department_id = d.id
+        JOIN task_categories tc ON wl.category_id = tc.id
+        WHERE wl.id = ?
+        """,
+        (log_id,)
+    ).fetchone()
+
+    if not log:
+        conn.close()
+        flash('업무 일지를 찾을 수 없습니다.', 'warning')
+        return redirect(url_for('work_logs'))
+
+    if not can_manage_work_log(log):
+        conn.close()
+        flash('본인이 작성한 업무 일지만 수정할 수 있습니다.', 'danger')
+        return redirect(url_for('work_logs'))
+
+    if request.method == 'POST':
+        work_date = request.form.get('work_date', '').strip()
+        department_id = request.form.get('department_id', '').strip()
+        category_id = request.form.get('category_id', '').strip()
+        hours = request.form.get('hours', '').strip()
+        detail = request.form.get('detail', '').strip()
+
+        if not work_date or not department_id or not category_id or not hours or not detail:
+            flash('모든 항목을 입력해주세요.', 'danger')
+        else:
+            category_match = conn.execute(
+                'SELECT id FROM task_categories WHERE id = ? AND department_id = ?',
+                (int(category_id), int(department_id))
+            ).fetchone()
+            if not category_match:
+                flash('선택한 부서와 업무 분류가 일치하지 않습니다.', 'danger')
+            else:
+                conn.execute(
+                    """
+                    UPDATE work_logs
+                    SET work_date = ?, department_id = ?, category_id = ?, hours = ?, detail = ?
+                    WHERE id = ?
+                    """,
+                    (work_date, int(department_id), int(category_id), float(hours), detail, log_id)
+                )
+                conn.commit()
+                conn.close()
+                flash('업무 일지가 수정되었습니다.', 'success')
+                return redirect(url_for('work_logs'))
+
+    departments = get_departments_with_categories()
+    conn.close()
+    return render_template('edit_work_log.html', log=log, departments=departments)
+
+
+@app.route('/work-logs/<int:log_id>/delete', methods=['POST'])
+@role_required('member', 'manager', 'superadmin')
+def delete_work_log(log_id):
+    conn = get_db()
+    log = conn.execute('SELECT id, user_id FROM work_logs WHERE id = ?', (log_id,)).fetchone()
+
+    if not log:
+        conn.close()
+        flash('업무 일지를 찾을 수 없습니다.', 'warning')
+        return redirect(url_for('work_logs'))
+
+    if not can_manage_work_log(log):
+        conn.close()
+        flash('본인이 작성한 업무 일지만 삭제할 수 있습니다.', 'danger')
+        return redirect(url_for('work_logs'))
+
+    conn.execute('DELETE FROM work_logs WHERE id = ?', (log_id,))
+    conn.commit()
+    conn.close()
+    flash('업무 일지가 삭제되었습니다.', 'info')
+    return redirect(url_for('work_logs'))
 
 
 @app.route('/dashboard')

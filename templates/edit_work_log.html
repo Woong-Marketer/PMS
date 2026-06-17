@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}업무 일지 수정 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">업무 일지 수정</h2>
+        <p class="text-muted mb-0">작성한 업무 내용을 수정할 수 있으며, 중간 관리자와 대표 관리자는 전체 기록을 관리할 수 있습니다.</p>
+    </div>
+    <a href="{{ url_for('work_logs') }}" class="btn btn-outline-secondary">목록으로</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-4">
+        {% set selected_department_id = request.form.get('department_id', log.department_id|string) %}
+        {% set selected_category_id = request.form.get('category_id', log.category_id|string) %}
+        {% set selected_hours = request.form.get('hours', '%.1f'|format(log.hours)) %}
+        <form method="post">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">업무 일자</label>
+                    <input type="date" class="form-control" name="work_date" value="{{ request.form.get('work_date', log.work_date) }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">부서</label>
+                    <select class="form-select" id="departmentSelect" name="department_id" required>
+                        <option value="">부서 선택</option>
+                        {% for dep in departments %}
+                        <option value="{{ dep.id }}" {% if selected_department_id == dep.id|string %}selected{% endif %}>{{ dep.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">업무 분류</label>
+                    <select class="form-select" id="categorySelect" name="category_id" required></select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">소요 시간</label>
+                    <select class="form-select" name="hours" required>
+                        {% for step in range(1, 25) %}
+                        {% set hour_value = '%.1f'|format(step * 0.5) %}
+                        <option value="{{ hour_value }}" {% if selected_hours == hour_value %}selected{% endif %}>{{ hour_value }}시간</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">상세 내용</label>
+                    <textarea class="form-control" name="detail" rows="5" placeholder="상세 업무 내용을 입력하세요" required>{{ request.form.get('detail', log.detail) }}</textarea>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a href="{{ url_for('work_logs') }}" class="btn btn-light">취소</a>
+                <button type="submit" class="btn btn-primary">수정 저장</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script id="departments-data" type="application/json">{{ departments|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const departmentsData = JSON.parse(document.getElementById('departments-data').textContent);
+const departmentSelect = document.getElementById('departmentSelect');
+const categorySelect = document.getElementById('categorySelect');
+const selectedCategoryId = {{ request.form.get('category_id', log.category_id|string)|tojson }};
+
+function buildCategoryOptions(departmentId, currentCategoryId) {
+    const department = departmentsData.find(dep => String(dep.id) === String(departmentId));
+    if (!department) {
+        categorySelect.innerHTML = '<option value="">업무 분류 선택</option>';
+        return;
+    }
+
+    const options = ['<option value="">업무 분류 선택</option>']
+        .concat(department.categories.map(cat => {
+            const selected = String(cat.id) === String(currentCategoryId) ? 'selected' : '';
+            return `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+        }));
+    categorySelect.innerHTML = options.join('');
+}
+
+buildCategoryOptions(departmentSelect.value, selectedCategoryId);
+departmentSelect.addEventListener('change', () => buildCategoryOptions(departmentSelect.value, ''));
+</script>
+{% endblock %}

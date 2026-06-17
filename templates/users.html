@@ -62,7 +62,7 @@
                                 <td>{{ user.username }}</td>
                                 <td>{{ user.created_at }}</td>
                                 <td>
-                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                    <div class="action-form-inline justify-content-end">
                                         <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="action-form-inline user-role-form">
                                             <select name="role" class="form-select form-select-sm action-input-sm" required>
                                                 <option value="member">일반 팀원</option>
