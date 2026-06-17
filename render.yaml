@@ -2,15 +2,19 @@ services:
   - type: web
     name: pms-web-app
     env: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     healthCheckPath: /healthz
     envVars:
       - key: SECRET_KEY
         generateValue: true
-      - key: DATABASE_PATH
-        value: /data/pms.db
+      - key: DATABASE_BACKEND
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
       - key: INITIAL_ADMIN_USERNAME
         value: admin
       - key: INITIAL_ADMIN_PASSWORD
@@ -21,7 +25,3 @@ services:
         value: false
       - key: ENABLE_DEMO_DATA
         value: false
-    disk:
-      name: pms-data
-      mountPath: /data
-      sizeGB: 1

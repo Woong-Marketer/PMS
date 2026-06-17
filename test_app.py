@@ -7,6 +7,7 @@ DB_FILE = os.path.join(tempfile.gettempdir(), 'pms_test_worklog_permissions.db')
 if os.path.exists(DB_FILE):
     os.remove(DB_FILE)
 
+os.environ['DATABASE_BACKEND'] = 'sqlite'
 os.environ['DATABASE_PATH'] = DB_FILE
 os.environ['SECRET_KEY'] = 'test-secret'
 os.environ['INITIAL_ADMIN_USERNAME'] = 'admin'

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Supabase 설정 필요 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4 p-lg-5">
+                <h2 class="fw-bold mb-3">Supabase 초기 설정이 필요합니다</h2>
+                <p class="text-muted mb-4">현재 앱은 Supabase 외부 데이터베이스를 사용하도록 설정되어 있습니다. 테이블 구조가 아직 생성되지 않았거나 환경변수가 비어 있으면 아래 안내 화면이 표시됩니다.</p>
+                <div class="alert alert-warning mb-4">
+                    <div class="fw-semibold mb-2">현재 감지된 오류</div>
+                    <div class="small">{{ error_message }}</div>
+                </div>
+                <ol class="mb-4">
+                    <li>Supabase 프로젝트 생성</li>
+                    <li>프로젝트의 SQL Editor에서 <code>supabase_schema.sql</code> 전체 실행</li>
+                    <li>Render 환경변수에 <code>SUPABASE_URL</code> 과 <code>SUPABASE_KEY</code> 입력</li>
+                    <li>다시 배포</li>
+                </ol>
+                <div class="alert alert-info mb-0">
+                    <strong>권장:</strong> <code>SUPABASE_KEY</code>에는 서버 전용 <code>service_role</code> 키를 넣어주세요.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
