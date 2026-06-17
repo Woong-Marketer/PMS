@@ -9,6 +9,19 @@ body {
     color: var(--pms-text);
 }
 
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.navbar-brand-logo {
+    height: 40px;
+    width: auto;
+    display: block;
+}
+
 .min-vh-75 {
     min-height: 75vh;
 }
@@ -60,4 +73,71 @@ body {
     text-align: center;
     color: #64748b;
     background: #fff;
+}
+
+.action-form-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.action-input-sm {
+    min-width: 180px;
+}
+
+.action-btn-sm {
+    min-width: 68px;
+    white-space: nowrap;
+}
+
+.action-btn-lg {
+    min-width: 180px;
+    height: 42px;
+    white-space: nowrap;
+}
+
+.department-header-actions,
+.category-actions-wrap,
+.user-role-form {
+    justify-content: flex-end;
+}
+
+.category-edit-form,
+.department-edit-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.category-edit-input,
+.add-category-input {
+    flex: 1 1 auto;
+}
+
+.add-category-form .form-label {
+    margin-bottom: 0.5rem;
+}
+
+.add-category-row {
+    align-items: stretch;
+}
+
+@media (max-width: 991.98px) {
+    .action-input-sm,
+    .action-btn-lg {
+        min-width: 100%;
+    }
+
+    .department-header-actions,
+    .category-actions-wrap,
+    .user-role-form {
+        justify-content: flex-start;
+    }
+
+    .category-edit-form,
+    .department-edit-form,
+    .add-category-row {
+        width: 100%;
+    }
 }

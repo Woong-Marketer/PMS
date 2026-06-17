@@ -63,16 +63,16 @@
                                 <td>{{ user.created_at }}</td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-2 justify-content-end">
-                                        <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="d-flex gap-2">
-                                            <select name="role" class="form-select form-select-sm" required>
+                                        <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="action-form-inline user-role-form">
+                                            <select name="role" class="form-select form-select-sm action-input-sm" required>
                                                 <option value="member">일반 팀원</option>
                                                 <option value="manager">중간 관리자</option>
                                                 <option value="superadmin">대표 관리자</option>
                                             </select>
-                                            <button type="submit" class="btn btn-sm btn-primary">승인</button>
+                                            <button type="submit" class="btn btn-sm btn-primary action-btn-sm">승인</button>
                                         </form>
                                         <form method="post" action="{{ url_for('reject_user', user_id=user.id) }}" onsubmit="return confirm('이 회원가입 요청을 반려할까요?');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">반려</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger action-btn-sm">반려</button>
                                         </form>
                                     </div>
                                 </td>
@@ -116,13 +116,13 @@
                         <td><span class="badge text-bg-secondary">{{ role_labels.get(user.role) }}</span></td>
                         <td>
                             {% if user.id != session.get('user_id') %}
-                            <form method="post" action="{{ url_for('update_user_role', user_id=user.id) }}" class="d-flex gap-2">
-                                <select name="role" class="form-select form-select-sm" required>
+                            <form method="post" action="{{ url_for('update_user_role', user_id=user.id) }}" class="action-form-inline user-role-form">
+                                <select name="role" class="form-select form-select-sm action-input-sm" required>
                                     <option value="superadmin" {% if user.role == 'superadmin' %}selected{% endif %}>대표 관리자</option>
                                     <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>중간 관리자</option>
                                     <option value="member" {% if user.role == 'member' %}selected{% endif %}>일반 팀원</option>
                                 </select>
-                                <button type="submit" class="btn btn-sm btn-outline-primary">변경</button>
+                                <button type="submit" class="btn btn-sm btn-outline-primary action-btn-sm">변경</button>
                             </form>
                             {% else %}
                             <span class="text-muted small">현재 로그인 계정</span>
@@ -131,7 +131,7 @@
                         <td>
                             {% if user.id != session.get('user_id') %}
                             <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('정말 삭제하시겠습니까?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger action-btn-sm">삭제</button>
                             </form>
                             {% else %}
                             <span class="text-muted small">삭제 불가</span>
@@ -167,17 +167,17 @@
                         <td>{{ user.username }}</td>
                         <td><span class="badge text-bg-danger">{{ status_labels.get(user.status) }}</span></td>
                         <td>
-                            <div class="d-flex gap-2">
-                                <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="d-flex gap-2">
-                                    <select name="role" class="form-select form-select-sm" required>
+                            <div class="action-form-inline">
+                                <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="action-form-inline user-role-form">
+                                    <select name="role" class="form-select form-select-sm action-input-sm" required>
                                         <option value="member">일반 팀원</option>
                                         <option value="manager">중간 관리자</option>
                                         <option value="superadmin">대표 관리자</option>
                                     </select>
-                                    <button type="submit" class="btn btn-sm btn-outline-success">재승인</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-success action-btn-sm">재승인</button>
                                 </form>
                                 <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('반려 계정을 완전히 삭제할까요?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger action-btn-sm">삭제</button>
                                 </form>
                             </div>
                         </td>
