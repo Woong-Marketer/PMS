@@ -49,6 +49,8 @@ DEFAULT_CATEGORIES = {
     '생산팀': ['생산 계획', '조립', '품질 점검']
 }
 
+ENABLE_DEFAULT_ORG_DATA = os.environ.get('ENABLE_DEFAULT_ORG_DATA', 'false').lower() == 'true'
+
 BOOTSTRAP_ERROR = None
 
 
@@ -176,23 +178,24 @@ class BaseStorage:
                 self.create_user('member1', generate_password_hash('member1234'), '팀원 1', 'member', 'approved', approved_at=now, approved_by=admin_id, created_at=now)
                 self.create_user('member2', generate_password_hash('member1234'), '팀원 2', 'member', 'approved', approved_at=now, approved_by=admin_id, created_at=now)
 
-        existing_departments = {dep['name']: dep for dep in self.list_departments()}
-        for dep_name in DEFAULT_DEPARTMENTS:
-            if dep_name not in existing_departments:
-                self.create_department(dep_name, now)
+        if ENABLE_DEFAULT_ORG_DATA:
+            existing_departments = {dep['name']: dep for dep in self.list_departments()}
+            for dep_name in DEFAULT_DEPARTMENTS:
+                if dep_name not in existing_departments:
+                    self.create_department(dep_name, now)
 
-        existing_departments = {dep['name']: dep for dep in self.list_departments()}
-        categories = self.list_categories()
-        existing_category_keys = {(int(cat['department_id']), cat['name']) for cat in categories}
-        for dep_name, category_names in DEFAULT_CATEGORIES.items():
-            dep = existing_departments.get(dep_name)
-            if not dep:
-                continue
-            for category_name in category_names:
-                key = (int(dep['id']), category_name)
-                if key not in existing_category_keys:
-                    self.create_category(dep['id'], category_name, now)
-                    existing_category_keys.add(key)
+            existing_departments = {dep['name']: dep for dep in self.list_departments()}
+            categories = self.list_categories()
+            existing_category_keys = {(int(cat['department_id']), cat['name']) for cat in categories}
+            for dep_name, category_names in DEFAULT_CATEGORIES.items():
+                dep = existing_departments.get(dep_name)
+                if not dep:
+                    continue
+                for category_name in category_names:
+                    key = (int(dep['id']), category_name)
+                    if key not in existing_category_keys:
+                        self.create_category(dep['id'], category_name, now)
+                        existing_category_keys.add(key)
 
         if os.environ.get('ENABLE_DEMO_DATA', 'false').lower() == 'true' and not self.list_work_logs():
             user_by_username = {user['username']: user for user in self.list_users()}

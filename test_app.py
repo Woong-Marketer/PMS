@@ -15,6 +15,7 @@ os.environ['INITIAL_ADMIN_PASSWORD'] = 'admin1234'
 os.environ['INITIAL_ADMIN_NAME'] = '대표 관리자'
 os.environ['ENABLE_DEMO_USERS'] = 'false'
 os.environ['ENABLE_DEMO_DATA'] = 'false'
+os.environ['ENABLE_DEFAULT_ORG_DATA'] = 'true'
 
 app_module = importlib.import_module('app')
 app = app_module.app
