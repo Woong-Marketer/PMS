@@ -1,0 +1,63 @@
+:root {
+    --pms-primary: #4f46e5;
+    --pms-soft: #eef2ff;
+    --pms-text: #111827;
+}
+
+body {
+    background: #f5f7fb;
+    color: var(--pms-text);
+}
+
+.min-vh-75 {
+    min-height: 75vh;
+}
+
+.card {
+    border-radius: 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.demo-box {
+    background: var(--pms-soft);
+    border-radius: 1rem;
+    padding: 1rem;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #ffffff, #f8faff);
+}
+
+.filter-bar {
+    background: #ffffff;
+    border-radius: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.work-entry-row {
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    margin-bottom: 1rem;
+}
+
+.table thead th {
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.chart-wrap {
+    position: relative;
+    min-height: 340px;
+}
+
+.empty-state {
+    border: 1px dashed #cbd5e1;
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    color: #64748b;
+    background: #fff;
+}

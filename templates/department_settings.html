@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}부서 및 업무 분류 설정 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">부서 및 업무 분류 설정</h2>
+        <p class="text-muted mb-0">대표 관리자만 접근 가능한 설정 페이지입니다.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">부서 추가</h5>
+                <form method="post" class="vstack gap-3">
+                    <input type="hidden" name="action" value="add_department">
+                    <div>
+                        <label class="form-label">부서명</label>
+                        <input type="text" name="department_name" class="form-control" placeholder="예: 영업팀" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">부서 저장</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="vstack gap-4">
+            {% for dep in departments %}
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold mb-1">{{ dep.name }}</h5>
+                            <span class="text-muted small">하위 업무 분류 {{ dep.categories|length }}개</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <form method="post" class="d-flex gap-2">
+                                <input type="hidden" name="action" value="edit_department">
+                                <input type="hidden" name="department_id" value="{{ dep.id }}">
+                                <input type="text" name="department_name" class="form-control form-control-sm" value="{{ dep.name }}" required>
+                                <button class="btn btn-sm btn-outline-primary" type="submit">수정</button>
+                            </form>
+                            <form method="post" onsubmit="return confirm('부서와 하위 업무 분류가 함께 삭제됩니다. 계속할까요?');">
+                                <input type="hidden" name="action" value="delete_department">
+                                <input type="hidden" name="department_id" value="{{ dep.id }}">
+                                <button class="btn btn-sm btn-outline-danger" type="submit">삭제</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>업무 분류</th>
+                                    <th class="text-end">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in dep.categories %}
+                                <tr>
+                                    <td>{{ cat.name }}</td>
+                                    <td>
+                                        <div class="d-flex justify-content-end flex-wrap gap-2">
+                                            <form method="post" class="d-flex gap-2">
+                                                <input type="hidden" name="action" value="edit_category">
+                                                <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                                <input type="text" name="category_name" class="form-control form-control-sm" value="{{ cat.name }}" required>
+                                                <button class="btn btn-sm btn-outline-primary" type="submit">수정</button>
+                                            </form>
+                                            <form method="post" onsubmit="return confirm('해당 업무 분류를 삭제할까요?');">
+                                                <input type="hidden" name="action" value="delete_category">
+                                                <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit">삭제</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-muted">등록된 업무 분류가 없습니다.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form method="post" class="row g-2 align-items-end">
+                        <input type="hidden" name="action" value="add_category">
+                        <input type="hidden" name="department_id" value="{{ dep.id }}">
+                        <div class="col-md-8">
+                            <label class="form-label">새 업무 분류</label>
+                            <input type="text" name="category_name" class="form-control" placeholder="예: 시장 조사" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">업무 분류 추가</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

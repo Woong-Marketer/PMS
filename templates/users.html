@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}사용자 관리 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">사용자 관리</h2>
+        <p class="text-muted mb-0">회원가입 승인, 권한 부여, 기존 사용자 권한 변경까지 한 화면에서 관리합니다.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-3">관리자 직접 사용자 추가</h5>
+                <form method="post" class="vstack gap-3">
+                    <div>
+                        <label class="form-label">이름</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div>
+                        <label class="form-label">아이디</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div>
+                        <label class="form-label">비밀번호</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div>
+                        <label class="form-label">권한</label>
+                        <select name="role" class="form-select" required>
+                            <option value="superadmin">대표 관리자</option>
+                            <option value="manager">중간 관리자</option>
+                            <option value="member">일반 팀원</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">즉시 승인 사용자 저장</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-3">회원가입 승인 대기</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>이름</th>
+                                <th>아이디</th>
+                                <th>신청일</th>
+                                <th>권한 부여 / 처리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in pending_users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.created_at }}</td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                        <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="d-flex gap-2">
+                                            <select name="role" class="form-select form-select-sm" required>
+                                                <option value="member">일반 팀원</option>
+                                                <option value="manager">중간 관리자</option>
+                                                <option value="superadmin">대표 관리자</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-primary">승인</button>
+                                        </form>
+                                        <form method="post" action="{{ url_for('reject_user', user_id=user.id) }}" onsubmit="return confirm('이 회원가입 요청을 반려할까요?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">반려</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5"><div class="empty-state py-4">현재 승인 대기 중인 회원가입이 없습니다.</div></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title fw-bold mb-3">승인 완료 사용자</h5>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>아이디</th>
+                        <th>상태</th>
+                        <th>현재 권한</th>
+                        <th>권한 변경</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in approved_users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td><span class="badge text-bg-success">{{ status_labels.get(user.status) }}</span></td>
+                        <td><span class="badge text-bg-secondary">{{ role_labels.get(user.role) }}</span></td>
+                        <td>
+                            {% if user.id != session.get('user_id') %}
+                            <form method="post" action="{{ url_for('update_user_role', user_id=user.id) }}" class="d-flex gap-2">
+                                <select name="role" class="form-select form-select-sm" required>
+                                    <option value="superadmin" {% if user.role == 'superadmin' %}selected{% endif %}>대표 관리자</option>
+                                    <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>중간 관리자</option>
+                                    <option value="member" {% if user.role == 'member' %}selected{% endif %}>일반 팀원</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">변경</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">현재 로그인 계정</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.id != session.get('user_id') %}
+                            <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted small">삭제 불가</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title fw-bold mb-3">반려된 계정</h5>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>이름</th>
+                        <th>아이디</th>
+                        <th>상태</th>
+                        <th>관리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in rejected_users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td><span class="badge text-bg-danger">{{ status_labels.get(user.status) }}</span></td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="d-flex gap-2">
+                                    <select name="role" class="form-select form-select-sm" required>
+                                        <option value="member">일반 팀원</option>
+                                        <option value="manager">중간 관리자</option>
+                                        <option value="superadmin">대표 관리자</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-success">재승인</button>
+                                </form>
+                                <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('반려 계정을 완전히 삭제할까요?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5"><div class="empty-state py-4">반려된 계정이 없습니다.</div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

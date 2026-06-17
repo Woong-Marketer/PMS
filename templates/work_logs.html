@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}업무 일지 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">일일 업무 일지</h2>
+        <p class="text-muted mb-0">팝업 창에서 여러 업무를 한 번에 입력하고 저장할 수 있습니다.</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logModal">업무 등록</button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">최근 업무 기록</h5>
+            <span class="text-muted small">최대 100건</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>일자</th>
+                        <th>작성자</th>
+                        <th>부서</th>
+                        <th>업무 분류</th>
+                        <th>소요 시간</th>
+                        <th>상세 내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.work_date }}</td>
+                        <td>{{ log.user_name }}</td>
+                        <td>{{ log.department_name }}</td>
+                        <td>{{ log.category_name }}</td>
+                        <td>{{ log.hours }}시간</td>
+                        <td>{{ log.detail }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">아직 등록된 업무 기록이 없습니다.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="logModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold">업무 일지 작성</h5>
+                    <div class="text-muted small">부서 → 업무 분류 → 소요 시간 → 상세 내용 순서로 입력하세요.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="workLogForm">
+                <div class="modal-body">
+                    <div class="row g-3 align-items-end mb-4">
+                        <div class="col-md-4 col-lg-3">
+                            <label class="form-label">업무 일자</label>
+                            <input type="date" class="form-control" name="work_date" value="{{ today_str }}" required>
+                        </div>
+                    </div>
+                    <div id="entryRows"></div>
+                    <input type="hidden" name="entries_json" id="entriesJson">
+                    <button type="button" class="btn btn-outline-primary" id="addEntryBtn">업무 추가 +</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">닫기</button>
+                    <button type="submit" class="btn btn-primary">업무 일지 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script id="departments-data" type="application/json">{{ departments|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/work_logs.js') }}"></script>
+{% endblock %}

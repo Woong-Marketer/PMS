@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}대시보드 | 사내 PMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">근무 시간 대시보드</h2>
+        <p class="text-muted mb-0">일별·주별·월별 기준으로 부서 및 업무 분류 비중을 시각화합니다.</p>
+    </div>
+</div>
+
+<div class="filter-bar mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">기간 필터</label>
+            <select class="form-select" id="periodFilter">
+                <option value="day">일별</option>
+                <option value="week">주별</option>
+                <option value="month">월별</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">팀원 필터</label>
+            <select class="form-select" id="memberFilter">
+                <option value="all">전체 팀원</option>
+                {% for member in members %}
+                <option value="{{ member.id }}">{{ member.name }} ({{ role_labels.get(member.role) }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" id="loadDashboardBtn">적용</button>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">총 집계 시간</div>
+                <div class="display-6 fw-bold" id="totalHours">0시간</div>
+                <div class="text-muted small" id="rangeText">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">가장 큰 부서 비중</div>
+                <div class="h3 fw-bold" id="topDepartment">-</div>
+                <div class="text-muted small" id="topDepartmentMeta">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">가장 큰 업무 분류 비중</div>
+                <div class="h3 fw-bold" id="topCategory">-</div>
+                <div class="text-muted small" id="topCategoryMeta">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">부서별 비중</h5>
+                <div class="chart-wrap"><canvas id="departmentChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">업무 분류별 비중</h5>
+                <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3">기간 내 일자별 시간 합계</h5>
+                <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
