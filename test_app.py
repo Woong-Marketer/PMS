@@ -52,6 +52,24 @@ for user_data in [
     assert response.status_code == 200
     assert '즉시 승인 상태'.encode('utf-8') in response.data
 
+# 사용자 관리 화면에 부서 변경 UI가 보이는지 확인
+users_page = client.get('/users')
+assert users_page.status_code == 200
+assert '현재 부서'.encode('utf-8') in users_page.data
+assert '부서 변경'.encode('utf-8') in users_page.data
+
+# 승인 완료 사용자 부서 변경 확인
+change_department = client.post('/users/2/department', data={'department_id': str(department_production)}, follow_redirects=True)
+assert change_department.status_code == 200
+assert '사용자 부서가 변경되었습니다.'.encode('utf-8') in change_department.data
+with app_module.get_db() as conn:
+    changed_department = conn.execute("SELECT department_id FROM users WHERE username = 'membera'").fetchone()
+assert changed_department['department_id'] == department_production
+
+# 다시 원래 부서로 복원
+restore_department = client.post('/users/2/department', data={'department_id': str(department_marketing)}, follow_redirects=True)
+assert restore_department.status_code == 200
+
 logout()
 
 # 회원가입 화면에 부서 드롭다운이 보이는지 확인

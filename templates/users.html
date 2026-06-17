@@ -60,6 +60,7 @@
                                 <th>이름</th>
                                 <th>아이디</th>
                                 <th>신청일</th>
+                                <th>신청 부서</th>
                                 <th>권한 부여 / 처리</th>
                             </tr>
                         </thead>
@@ -70,13 +71,20 @@
                                 <td>{{ user.name }}</td>
                                 <td>{{ user.username }}</td>
                                 <td>{{ user.created_at }}</td>
+                                <td><span class="badge text-bg-light">{{ user.department_name }}</span></td>
                                 <td>
                                     <div class="action-form-inline justify-content-end">
                                         <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="action-form-inline user-role-form">
                                             <select name="role" class="form-select form-select-sm action-input-sm" required>
-                                                <option value="member">일반 팀원</option>
-                                                <option value="manager">중간 관리자</option>
-                                                <option value="superadmin">대표 관리자</option>
+                                                <option value="member" {% if user.role == 'member' %}selected{% endif %}>일반 팀원</option>
+                                                <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>중간 관리자</option>
+                                                <option value="superadmin" {% if user.role == 'superadmin' %}selected{% endif %}>대표 관리자</option>
+                                            </select>
+                                            <select name="department_id" class="form-select form-select-sm action-input-sm" required>
+                                                <option value="">부서</option>
+                                                {% for dep in departments %}
+                                                <option value="{{ dep.id }}" {% if user.department_id and user.department_id|int == dep.id|int %}selected{% endif %}>{{ dep.name }}</option>
+                                                {% endfor %}
                                             </select>
                                             <button type="submit" class="btn btn-sm btn-primary action-btn-sm">승인</button>
                                         </form>
@@ -88,7 +96,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5"><div class="empty-state py-4">현재 승인 대기 중인 회원가입이 없습니다.</div></td>
+                                <td colspan="6"><div class="empty-state py-4">현재 승인 대기 중인 회원가입이 없습니다.</div></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -111,7 +119,9 @@
                         <th>아이디</th>
                         <th>상태</th>
                         <th>현재 권한</th>
+                        <th>현재 부서</th>
                         <th>권한 변경</th>
+                        <th>부서 변경</th>
                         <th>관리</th>
                     </tr>
                 </thead>
@@ -123,6 +133,7 @@
                         <td>{{ user.username }}</td>
                         <td><span class="badge text-bg-success">{{ status_labels.get(user.status) }}</span></td>
                         <td><span class="badge text-bg-secondary">{{ role_labels.get(user.role) }}</span></td>
+                        <td><span class="badge text-bg-light">{{ user.department_name }}</span></td>
                         <td>
                             {% if user.id != session.get('user_id') %}
                             <form method="post" action="{{ url_for('update_user_role', user_id=user.id) }}" class="action-form-inline user-role-form">
@@ -136,6 +147,16 @@
                             {% else %}
                             <span class="text-muted small">현재 로그인 계정</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{{ url_for('update_user_department', user_id=user.id) }}" class="action-form-inline user-role-form">
+                                <select name="department_id" class="form-select form-select-sm action-input-sm" required>
+                                    {% for dep in departments %}
+                                    <option value="{{ dep.id }}" {% if user.department_id and user.department_id|int == dep.id|int %}selected{% endif %}>{{ dep.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-secondary action-btn-sm">변경</button>
+                            </form>
                         </td>
                         <td>
                             {% if user.id != session.get('user_id') %}
@@ -165,6 +186,7 @@
                         <th>이름</th>
                         <th>아이디</th>
                         <th>상태</th>
+                        <th>부서</th>
                         <th>관리</th>
                     </tr>
                 </thead>
@@ -175,13 +197,20 @@
                         <td>{{ user.name }}</td>
                         <td>{{ user.username }}</td>
                         <td><span class="badge text-bg-danger">{{ status_labels.get(user.status) }}</span></td>
+                        <td><span class="badge text-bg-light">{{ user.department_name }}</span></td>
                         <td>
                             <div class="action-form-inline">
                                 <form method="post" action="{{ url_for('approve_user', user_id=user.id) }}" class="action-form-inline user-role-form">
                                     <select name="role" class="form-select form-select-sm action-input-sm" required>
-                                        <option value="member">일반 팀원</option>
-                                        <option value="manager">중간 관리자</option>
-                                        <option value="superadmin">대표 관리자</option>
+                                        <option value="member" {% if user.role == 'member' %}selected{% endif %}>일반 팀원</option>
+                                        <option value="manager" {% if user.role == 'manager' %}selected{% endif %}>중간 관리자</option>
+                                        <option value="superadmin" {% if user.role == 'superadmin' %}selected{% endif %}>대표 관리자</option>
+                                    </select>
+                                    <select name="department_id" class="form-select form-select-sm action-input-sm" required>
+                                        <option value="">부서</option>
+                                        {% for dep in departments %}
+                                        <option value="{{ dep.id }}" {% if user.department_id and user.department_id|int == dep.id|int %}selected{% endif %}>{{ dep.name }}</option>
+                                        {% endfor %}
                                     </select>
                                     <button type="submit" class="btn btn-sm btn-outline-success action-btn-sm">재승인</button>
                                 </form>
@@ -193,7 +222,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5"><div class="empty-state py-4">반려된 계정이 없습니다.</div></td>
+                        <td colspan="6"><div class="empty-state py-4">반려된 계정이 없습니다.</div></td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -71,10 +71,13 @@ class BaseStorage:
     def create_user(self, username, password_hash, name, role, status, approved_at=None, approved_by=None, created_at=None, department_id=None):
         raise NotImplementedError
 
-    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None):
+    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None, department_id=None):
         raise NotImplementedError
 
     def update_user_role(self, user_id, role):
+        raise NotImplementedError
+
+    def update_user_department(self, user_id, department_id):
         raise NotImplementedError
 
     def reject_user(self, user_id, approved_by=None):
@@ -319,18 +322,30 @@ class SQLiteStorage(BaseStorage):
         conn.close()
         return dict(row)
 
-    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None):
+    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None, department_id=None):
         conn = self._connect()
-        conn.execute(
-            'UPDATE users SET status = ?, role = ?, approved_at = ?, approved_by = ? WHERE id = ?',
-            (status, role, approved_at, approved_by, user_id)
-        )
+        if department_id is None:
+            conn.execute(
+                'UPDATE users SET status = ?, role = ?, approved_at = ?, approved_by = ? WHERE id = ?',
+                (status, role, approved_at, approved_by, user_id)
+            )
+        else:
+            conn.execute(
+                'UPDATE users SET status = ?, role = ?, department_id = ?, approved_at = ?, approved_by = ? WHERE id = ?',
+                (status, role, department_id, approved_at, approved_by, user_id)
+            )
         conn.commit()
         conn.close()
 
     def update_user_role(self, user_id, role):
         conn = self._connect()
         conn.execute('UPDATE users SET role = ? WHERE id = ? AND status = ?', (role, user_id, 'approved'))
+        conn.commit()
+        conn.close()
+
+    def update_user_department(self, user_id, department_id):
+        conn = self._connect()
+        conn.execute('UPDATE users SET department_id = ? WHERE id = ?', (department_id, user_id))
         conn.commit()
         conn.close()
 
@@ -503,16 +518,22 @@ class SupabaseStorage(BaseStorage):
         response = self.client.table('users').insert(payload).execute()
         return dict(response.data[0])
 
-    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None):
-        self.client.table('users').update({
+    def update_user_status_and_role(self, user_id, status, role, approved_at=None, approved_by=None, department_id=None):
+        payload = {
             'status': status,
             'role': role,
             'approved_at': approved_at,
             'approved_by': approved_by
-        }).eq('id', user_id).execute()
+        }
+        if department_id is not None:
+            payload['department_id'] = int(department_id)
+        self.client.table('users').update(payload).eq('id', user_id).execute()
 
     def update_user_role(self, user_id, role):
         self.client.table('users').update({'role': role}).eq('id', user_id).eq('status', 'approved').execute()
+
+    def update_user_department(self, user_id, department_id):
+        self.client.table('users').update({'department_id': int(department_id)}).eq('id', user_id).execute()
 
     def reject_user(self, user_id, approved_by=None):
         self.client.table('users').update({
@@ -808,6 +829,8 @@ def logout():
 @app.route('/users', methods=['GET', 'POST'])
 @role_required('superadmin')
 def users():
+    departments = storage.get_departments_with_categories()
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
@@ -838,27 +861,37 @@ def users():
                 flash(str(exc), 'danger')
 
     all_users = storage.list_users()
+    department_map = {int(dep['id']): dep['name'] for dep in departments}
+    for user in all_users:
+        department_id = user.get('department_id')
+        user['department_name'] = department_map.get(int(department_id), '-') if department_id else '-'
     pending_users = sorted([user for user in all_users if user.get('status', 'approved') == 'pending'], key=lambda row: (row['created_at'], int(row['id'])))
     approved_users = sorted([user for user in all_users if user.get('status', 'approved') == 'approved'], key=lambda row: int(row['id']))
     rejected_users = sorted([user for user in all_users if user.get('status', 'approved') == 'rejected'], key=lambda row: (row['created_at'], int(row['id'])), reverse=True)
-    return render_template('users.html', pending_users=pending_users, approved_users=approved_users, rejected_users=rejected_users, departments=storage.get_departments_with_categories())
+    return render_template('users.html', pending_users=pending_users, approved_users=approved_users, rejected_users=rejected_users, departments=departments)
 
 
 @app.route('/users/<int:user_id>/approve', methods=['POST'])
 @role_required('superadmin')
 def approve_user(user_id):
     assigned_role = request.form.get('role', 'member').strip()
+    department_id = request.form.get('department_id', '').strip()
     if assigned_role not in ROLE_LABELS:
         assigned_role = 'member'
+    department = storage.get_department_by_id(int(department_id)) if department_id.isdigit() else None
+    if not department:
+        flash('선택한 부서를 다시 확인해주세요.', 'danger')
+        return redirect(url_for('users'))
 
     storage.update_user_status_and_role(
         user_id,
         'approved',
         assigned_role,
         approved_at=datetime.now().isoformat(timespec='seconds'),
-        approved_by=session.get('user_id')
+        approved_by=session.get('user_id'),
+        department_id=int(department_id)
     )
-    flash('회원가입이 승인되었고 권한이 부여되었습니다.', 'success')
+    flash('회원가입이 승인되었고 권한과 부서가 부여되었습니다.', 'success')
     return redirect(url_for('users'))
 
 
@@ -883,6 +916,22 @@ def update_user_role(user_id):
 
     storage.update_user_role(user_id, role)
     flash('사용자 권한이 변경되었습니다.', 'success')
+    return redirect(url_for('users'))
+
+
+@app.route('/users/<int:user_id>/department', methods=['POST'])
+@role_required('superadmin')
+def update_user_department(user_id):
+    department_id = request.form.get('department_id', '').strip()
+    department = storage.get_department_by_id(int(department_id)) if department_id.isdigit() else None
+    if not department:
+        flash('선택한 부서를 다시 확인해주세요.', 'danger')
+        return redirect(url_for('users'))
+
+    storage.update_user_department(user_id, int(department_id))
+    if user_id == session.get('user_id'):
+        session['department_id'] = int(department_id)
+    flash('사용자 부서가 변경되었습니다.', 'success')
     return redirect(url_for('users'))
 
 
