@@ -691,8 +691,8 @@ def enrich_work_logs(logs):
             'category_name': categories.get(int(log['category_id']), {}).get('name', '-')
         })
     enriched.sort(key=lambda row: (row['work_date'], row['id']), reverse=True)
-    enriched.sort(key=lambda row: row['department_name'])
     enriched.sort(key=lambda row: row['user_name'])
+    enriched.sort(key=lambda row: row['department_name'])
     return enriched
 
 
