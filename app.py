@@ -1112,7 +1112,8 @@ def work_logs():
     end_date = request.args.get('end_date', '').strip()
 
     all_logs = get_filtered_logs_for_view(limit=1000)
-        selected_date_logs = [
+
+    selected_date_logs = [
         log for log in all_logs
         if log['work_date'] == requested_date.isoformat()
     ]
@@ -1169,7 +1170,6 @@ def work_logs():
         'work_logs.html',
         logs=daily_logs,
         future_plans=future_plans,
-        departments=departments,
         departments=departments,
         selected_department_id=session.get('department_id') or '',
         selected_date=requested_date.isoformat(),
