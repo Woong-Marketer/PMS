@@ -322,11 +322,7 @@
 
 <script>
 function saveWorkImage() {
-
-    document.querySelectorAll(".capture-hide").forEach(el => {
-    el.style.display = "none";
-});
-    
+  
     const report = document.querySelector("#workReport");
 
     report.classList.add("capture-mode");
@@ -348,9 +344,6 @@ function saveWorkImage() {
 
     report.classList.remove("capture-mode");
 
-    document.querySelectorAll(".capture-hide").forEach(el => {
-        el.style.display = "";
-    });
 
 });
 
@@ -375,6 +368,14 @@ function saveWorkImage() {
 
 #workReport.capture-mode .card-body {
     background: #ffffff !important;
+}
+
+#workReport.capture-mode th:last-child,
+#workReport.capture-mode td:last-child {
+    display: none !important;
+}
+#workReport.capture-mode .capture-hide {
+    display: none !important;
 }
 </style>
 
