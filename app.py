@@ -53,6 +53,8 @@ ENABLE_DEFAULT_ORG_DATA = os.environ.get('ENABLE_DEFAULT_ORG_DATA', 'false').low
 
 BOOTSTRAP_ERROR = None
 
+FUTURE_PLAN_PREFIX = '[향후업무계획]'
+
 
 class StorageError(Exception):
     pass
@@ -1021,7 +1023,48 @@ def department_settings():
 @role_required('member', 'manager', 'superadmin')
 def work_logs():
     if request.method == 'POST':
+        action = request.form.get('action', 'work_log')
         work_date = request.form.get('work_date', date.today().isoformat())
+
+        # 향후 업무계획 저장
+        if action == 'future_plan':
+            future_plan = request.form.get('future_plan', '').strip()
+
+            if not future_plan:
+                flash('향후 업무계획을 입력해주세요.', 'warning')
+                return redirect(url_for('work_logs', view_date=work_date))
+
+            department_id = session.get('department_id')
+
+            if not department_id:
+                flash('소속 부서가 설정되어 있지 않습니다.', 'danger')
+                return redirect(url_for('work_logs', view_date=work_date))
+
+            categories = [
+                category
+                for category in storage.list_categories()
+                if int(category['department_id']) == int(department_id)
+            ]
+
+            if not categories:
+                flash('소속 부서에 등록된 업무 분류가 없습니다.', 'danger')
+                return redirect(url_for('work_logs', view_date=work_date))
+
+            category_id = categories[0]['id']
+
+            storage.create_work_log(
+                session['user_id'],
+                work_date,
+                int(department_id),
+                int(category_id),
+                1.0,
+                f'{FUTURE_PLAN_PREFIX} {future_plan}',
+                datetime.now().isoformat(timespec='seconds')
+            )
+
+            flash('향후 업무계획이 저장되었습니다.', 'success')
+            return redirect(url_for('work_logs', view_date=work_date))
+
         entries_json = request.form.get('entries_json', '[]')
         try:
             entries = json.loads(entries_json)
@@ -1069,7 +1112,24 @@ def work_logs():
     end_date = request.args.get('end_date', '').strip()
 
     all_logs = get_filtered_logs_for_view(limit=1000)
-    daily_logs = [log for log in all_logs if log['work_date'] == requested_date.isoformat()]
+        selected_date_logs = [
+        log for log in all_logs
+        if log['work_date'] == requested_date.isoformat()
+    ]
+
+    daily_logs = [
+        log for log in selected_date_logs
+        if not log['detail'].startswith(FUTURE_PLAN_PREFIX)
+    ]
+
+    future_plans = [
+        {
+            **log,
+            'plan_detail': log['detail'][len(FUTURE_PLAN_PREFIX):].strip()
+        }
+        for log in selected_date_logs
+        if log['detail'].startswith(FUTURE_PLAN_PREFIX)
+    ]
 
     search_active = any([keyword, user_id != 'all', category_id != 'all', start_date, end_date])
     search_results = []
@@ -1108,6 +1168,8 @@ def work_logs():
     return render_template(
         'work_logs.html',
         logs=daily_logs,
+        future_plans=future_plans,
+        departments=departments,
         departments=departments,
         selected_department_id=session.get('department_id') or '',
         selected_date=requested_date.isoformat(),
