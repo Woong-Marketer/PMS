@@ -64,7 +64,7 @@
                         <th>부서</th>
                         <th>업무 분류</th>
                         <th>상세 내용</th>
-                        <th>관리</th>
+                        <th class="capture-hide" style="width: 150px;">관리</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -129,7 +129,7 @@
                     <tr>
                         <th style="width: 130px;">작성자</th>
                         <th>향후 업무계획</th>
-                        <th style="width: 150px;">관리</th>
+                        <th class="capture-hide" style="width: 150px;">관리</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -370,10 +370,6 @@ function saveWorkImage() {
     background: #ffffff !important;
 }
 
-#workReport.capture-mode th:last-child,
-#workReport.capture-mode td:last-child {
-    display: none !important;
-}
 #workReport.capture-mode .capture-hide {
     display: none !important;
 }
