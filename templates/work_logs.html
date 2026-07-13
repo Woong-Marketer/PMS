@@ -323,19 +323,50 @@
 <script>
 function saveWorkImage() {
 
-    html2canvas(document.querySelector("#workReport")).then(canvas => {
+    const report = document.querySelector("#workReport");
+
+    report.classList.add("capture-mode");
+
+    html2canvas(report, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true
+    }).then(canvas => {
 
         const link = document.createElement("a");
 
         link.download = "업무일지_{{ selected_date }}.png";
-
         link.href = canvas.toDataURL("image/png");
-
         link.click();
+
+    }).finally(() => {
+
+        report.classList.remove("capture-mode");
 
     });
 
 }
 </script>
+
+<style>
+#workReport.capture-mode {
+    background: #ffffff !important;
+    padding: 0 !important;
+}
+
+#workReport.capture-mode .card {
+    box-shadow: none !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 0 !important;
+}
+
+#workReport.capture-mode .card + .card {
+    margin-top: 16px !important;
+}
+
+#workReport.capture-mode .card-body {
+    background: #ffffff !important;
+}
+</style>
 
 {% endblock %}
