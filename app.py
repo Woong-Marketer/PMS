@@ -1128,10 +1128,9 @@ def work_logs():
             **log,
             'plan_detail': log['detail'][len(FUTURE_PLAN_PREFIX):].strip()
         }
-        for log in selected_date_logs
+        for log in all_logs
         if log['detail'].startswith(FUTURE_PLAN_PREFIX)
     ]
-
     search_active = any([keyword, user_id != 'all', category_id != 'all', start_date, end_date])
     search_results = []
     if search_active:
