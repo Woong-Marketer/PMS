@@ -703,6 +703,8 @@ def get_filtered_logs_for_view(user_id=None, limit=100):
     if user_id is not None:
         logs = [log for log in logs if int(log['user_id']) == int(user_id)]
     enriched = enrich_work_logs(logs)
+    if limit is None:
+        return enriched
     return enriched[:limit]
 
 
@@ -1111,7 +1113,8 @@ def work_logs():
     start_date = request.args.get('start_date', '').strip()
     end_date = request.args.get('end_date', '').strip()
 
-    all_logs = get_filtered_logs_for_view(limit=1000)
+    # 부서·이름순 정렬 뒤 잘라내면 뒤쪽 직원의 일지가 빠지므로 전체를 가져온 뒤 날짜·검색 조건으로 거른다
+    all_logs = get_filtered_logs_for_view(limit=None)
 
     selected_date_logs = [
         log for log in all_logs
